@@ -160,7 +160,7 @@ def get_midi_bpm_and_meter(midi_path):
     return ret_msg
 
 
-with gr.Blocks() as demo:
+with gr.Blocks(title="Basic Song Analyzer") as demo:
     with gr.Tab("get tempo of a midi file"):
         gr.Interface(
             fn=get_midi_bpm_and_meter,
