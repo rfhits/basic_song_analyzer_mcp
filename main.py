@@ -9,15 +9,25 @@ SECTION_DICT = {
     "verse": "A",
     "chorus": "B",
     "bridge": "C",
+    "inst": "D",
+    "pre-chorus": "P",
     "outro": "O",
     "end": "E",
 }
 
 
 def calculate_segmentation(bpm, beats_per_bar, msa_format):
+    """calculate segmentation of a song, like i(intro) 4 A 8 B 4 A 8.
+
+    Args:
+        bpm: beats per minute.
+        beats_per_bar: how many beats per measure(bar). in time signature, it is the numerator.
+        msa_format: lines of "{start_time_sec} {tag}", like "0 intro\n10 verse"
+
+    Returns:
+        str: segmentation of song, like i4A8B4A8.
     """
-    使用绝对时间基准计算，消除累积误差。
-    """
+
     lines = [line.strip() for line in msa_format.strip().split("\n") if line.strip()]
     # 每秒拍数 = BPM / 60
     # 每秒小节数 = (BPM / 60) / time_sig_numerator
@@ -95,7 +105,15 @@ def calculate_segmentation(bpm, beats_per_bar, msa_format):
     return "".join(final_result)
 
 
-def get_tempo_of_midi(midi_path):
+def get_midi_bpm_and_meter(midi_path):
+    """Get beats per minute and time signature of midi.
+
+    Args:
+        midi_path: midi file path, use absolute path.
+
+    Returns:
+        str: analysis report of the midi file.
+    """
     if not os.path.exists(midi_path):
         print(f"错误: 文件 {midi_path} 不存在")
         return
@@ -145,7 +163,7 @@ def get_tempo_of_midi(midi_path):
 with gr.Blocks() as demo:
     with gr.Tab("get tempo of a midi file"):
         gr.Interface(
-            fn=get_tempo_of_midi,
+            fn=get_midi_bpm_and_meter,
             inputs=[gr.Textbox(label="midi path")],
             outputs=gr.Textbox(),
         )
