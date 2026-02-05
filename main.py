@@ -1,7 +1,7 @@
-import os
-
 import gradio as gr
-import mido
+
+from get_midi_tempo_meter import get_midi_bpm_and_meter
+from remap_midi_tempo_meter import remap_midi_tempo_meter
 
 # --- 验证测试 ---
 SECTION_DICT = {
@@ -105,61 +105,6 @@ def calculate_segmentation(bpm, beats_per_bar, msa_format):
     return "".join(final_result)
 
 
-def get_midi_bpm_and_meter(midi_path):
-    """Get beats per minute and time signature of midi.
-
-    Args:
-        midi_path: midi file path, use absolute path.
-
-    Returns:
-        str: analysis report of the midi file.
-    """
-    if not os.path.exists(midi_path):
-        print(f"错误: 文件 {midi_path} 不存在")
-        return
-
-    mid = mido.MidiFile(midi_path)
-    events = []
-
-    for i, track in enumerate(mid.tracks):
-        total_tick = 0
-        for msg in track:
-            total_tick += msg.time
-
-            # 捕获速度变化
-            if msg.type == "set_tempo":
-                bpm = mido.tempo2bpm(msg.tempo)
-                events.append(
-                    {"tick": total_tick, "type": "BPM", "value": round(bpm, 2)}
-                )
-
-            # 捕获拍号变化
-            elif msg.type == "time_signature":
-                # numerator: 分子, denominator: 分母 (MIDI 存的是 2 的幂次)
-                ts = f"{msg.numerator}/{2**msg.denominator}"
-                events.append(
-                    {"tick": total_tick, "type": "TimeSignature", "value": ts}
-                )
-        print(f"Track {i}: {total_tick}")
-    # 按时间线排序
-    events.sort(key=lambda x: x["tick"])
-
-    if not events:
-        print("该 MIDI 文件中没有找到显式的速度或拍号元消息")
-        return
-
-    print(f"--- 分析报告: {midi_path} ---")
-    ret_msg = "\n".join(
-        [
-            f"Tick: {e['tick']:<10} | 类型: {e['type']:<5} | 数值: {e['value']}"
-            for e in events
-        ]
-    )
-
-    print(ret_msg)
-    return ret_msg
-
-
 with gr.Blocks(title="Basic Song Analyzer") as demo:
     with gr.Tab("get tempo of a midi file"):
         gr.Interface(
@@ -177,6 +122,20 @@ with gr.Blocks(title="Basic Song Analyzer") as demo:
                 gr.Textbox(label="msa structure"),
             ],
             outputs=gr.Textbox(buttons=["copy"]),
+        )
+
+    with gr.Tab("remap midi tempo and meter"):
+        gr.Interface(
+            fn=remap_midi_tempo_meter,
+            inputs=[
+                gr.Textbox(label="input midi path"),
+                gr.Textbox(label="output midi path"),
+                gr.Number(label="target bpm"),
+                gr.Number(label="target time signature numerator"),
+                gr.Number(label="target time signature denominator"),
+                gr.Number(label="target ppq"),
+            ],
+            outputs=gr.Textbox(),
         )
 if __name__ == "__main__":
     demo.launch(mcp_server=True, server_port=7869)
